@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Build Docker image
         run: |
@@ -32,13 +32,25 @@ jobs:
             -p 127.0.0.1:8080:8080 \
             java-hello-world:ci
 
+      - name: Wait for application readiness
+        run: |
+          curl --fail --silent --show-error \
+            --retry 15 \
+            --retry-all-errors \
+            --retry-delay 2 \
+            --max-time 5 \
+            http://127.0.0.1:8080
+
       - name: Test Java application
         run: |
           response=$(curl --fail --silent --show-error \
-            --retry 10 --retry-connrefused \
-            --retry-delay 2 http://localhost:8080)
+            http://127.0.0.1:8080)
           echo "$response"
           test "$response" = "Hello World - Version 1.0"
+
+      - name: Display container status
+        if: always()
+        run: docker ps -a
 
       - name: Display application logs
         if: always()
